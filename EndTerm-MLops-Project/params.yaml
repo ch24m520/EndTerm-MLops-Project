@@ -1,0 +1,20 @@
+experiment:
+  name: titanic_baseline
+  tracking_uri: ./mlruns
+  registry_uri: ./mlruns
+  registered_model_name: titanic_clf
+
+spark:
+  master: local[*]
+  app_name: titanic-preproc-train
+  shuffle_partitions: 8
+
+preprocess:
+  target: Survived
+  test_size: 0.2
+  random_state: 42
+
+model:
+  algo: logistic_regression   # or random_forest
+  max_iter: 200
+  rf_n_estimators: 200

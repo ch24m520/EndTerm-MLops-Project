@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.venv/
+
+# Data & artifacts (recreated by pipeline)
+data/raw/
+data/processed/
+models/
+mlruns/
+
+# Misc
+*.log
+.DS_Store

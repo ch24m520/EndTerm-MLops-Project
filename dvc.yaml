@@ -1,7 +1,9 @@
 stages:
   preprocess:
-    cmd: PYTHONPATH=. python -m src.data_preprocessing.preprocess_spark
+    cmd: PYTHONPATH=. python -m src.data_preprocessing.preprocess_spark --params
+      conf/preprocess.yaml
     deps:
+    - conf/preprocess.yaml
     - data/raw
     - src/data_preprocessing/preprocess_spark.py
     outs:

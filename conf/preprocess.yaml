@@ -1,0 +1,5 @@
+app_name: "preprocess"
+master: "local[*]"
+shuffle_partitions: 4
+raw_dir: "data/raw"
+out_path: "data/processed/titanic_prepared.parquet"

@@ -1,8 +1,8 @@
 stages:
   preprocess:
-    cmd: python src/preprocess_spark.py
+    cmd: python src/data_preprocessing/preprocess_spark.py
     deps:
     - data/raw
-    - src/preprocess_spark.py
+    - src/data_preprocessing/preprocess_spark.py
     outs:
     - data/processed

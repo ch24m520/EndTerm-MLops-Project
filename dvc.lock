@@ -1,0 +1,26 @@
+schema: '2.0'
+stages:
+  preprocess:
+    cmd: PYTHONPATH=. python -m src.data_preprocessing.preprocess_spark --params
+      conf/preprocess.yaml
+    deps:
+    - path: conf/preprocess.yaml
+      hash: md5
+      md5: 080197644b1f98e672a0e212484dd1ff
+      size: 161
+    - path: data/raw
+      hash: md5
+      md5: 771bc81b4bb3f96ab410bc6b04e42586.dir
+      size: 61194
+      nfiles: 1
+    - path: src/data_preprocessing/preprocess_spark.py
+      hash: md5
+      md5: 09c1c31e8b863d4a3cf229be83a9adc8
+      size: 1778
+      isexec: true
+    outs:
+    - path: data/processed
+      hash: md5
+      md5: b9944649326c2070b3eae649c0802dea.dir
+      size: 7285
+      nfiles: 4

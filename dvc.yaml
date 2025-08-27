@@ -17,3 +17,11 @@ stages:
     - src/training/train_spark_mllib.py
     outs:
     - reports/training
+  register_model:
+    cmd: MLFLOW_TRACKING_URI=http://127.0.0.1:5001 PYTHONPATH=. python -m 
+      src.registry.promote_to_production
+    deps:
+    - reports/training/run_id.txt
+    - src/registry/promote_to_production.py
+    outs:
+    - reports/registry

@@ -8,3 +8,12 @@ stages:
     - src/data_preprocessing/preprocess_spark.py
     outs:
     - data/processed
+  train:
+    cmd: PYTHONPATH=. MLFLOW_TRACKING_URI=./mlruns python -m 
+      src.training.train_spark_mllib --params conf/train.yaml
+    deps:
+    - conf/train.yaml
+    - data/processed
+    - src/training/train_spark_mllib.py
+    outs:
+    - reports/training

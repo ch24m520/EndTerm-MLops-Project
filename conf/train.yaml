@@ -1,0 +1,24 @@
+spark:
+  app_name: "train_titanic"
+  master: "local[*]"
+  shuffle_partitions: 4
+
+paths:
+  dataset: "data/processed/titanic_prepared.parquet"   # from Task 1 output
+  reports_dir: "reports/training"                      # DVC out
+  mlruns_dir: "mlruns"                                 # local MLflow store
+
+train:
+  test_size: 0.2
+  seed: 42
+
+model:
+  type: "logreg"              # (logreg only here)
+  maxIter: 50
+  regParam_grid: [0.0, 0.01, 0.1]
+  elasticNet_grid: [0.0, 0.5]
+  cv_folds: 3
+  parallelism: 2
+
+mlflow:
+  experiment: "titanic_spark"

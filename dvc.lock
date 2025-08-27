@@ -25,7 +25,7 @@ stages:
       size: 7285
       nfiles: 4
   train:
-    cmd: PYTHONPATH=. MLFLOW_TRACKING_URI=./mlruns python -m 
+    cmd: PYTHONPATH=. MLFLOW_TRACKING_URI=http://127.0.0.1:5001 python -m 
       src.training.train_spark_mllib --params conf/train.yaml
     deps:
     - path: conf/train.yaml
@@ -44,6 +44,6 @@ stages:
     outs:
     - path: reports/training
       hash: md5
-      md5: 2c5c8be4e1ce3f884cc48a9fe3a8868e.dir
+      md5: 7f5ba80371603a019c053d716dcd6cd6.dir
       size: 406
       nfiles: 4

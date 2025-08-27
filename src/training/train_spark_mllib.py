@@ -5,12 +5,12 @@ from pyspark.ml.evaluation import BinaryClassificationEvaluator
 from pyspark.ml.tuning import ParamGridBuilder, CrossValidator
 import mlflow, mlflow.spark
 
-def load_yaml(p):
-    with open(p, "r") as f:
+def load_yaml(path):
+    with open(path, "r") as f:
         return yaml.safe_load(f)
 
-def ensure_dir(p):
-    os.makedirs(p, exist_ok=True)
+def ensure_dir(path):
+    os.makedirs(path, exist_ok=True)
 
 def main(cfg_path):
     C = load_yaml(cfg_path)
@@ -27,13 +27,15 @@ def main(cfg_path):
         .config("spark.sql.shuffle.partitions", C["spark"]["shuffle_partitions"])
         .getOrCreate()
     )
-# Data
-    df = spark.read.parquet(ds)  # expects columns: features, label
+
+    # Data
+    df = spark.read.parquet(ds)
     train, test = df.randomSplit(
         [1.0 - C["train"]["test_size"], C["train"]["test_size"]],
         seed=C["train"]["seed"]
     )
-# Model & CV
+
+    # Model & CV
     lr = LogisticRegression(featuresCol="features", labelCol="label", maxIter=C["model"]["maxIter"])
     grid = (
         ParamGridBuilder()
@@ -41,17 +43,18 @@ def main(cfg_path):
         .addGrid(lr.elasticNetParam, C["model"]["elasticNet_grid"])
         .build()
     )
-evaluator = BinaryClassificationEvaluator(
+    evaluator = BinaryClassificationEvaluator(
         rawPredictionCol="rawPrediction", labelCol="label", metricName="areaUnderROC"
     )
-cv = CrossValidator(
+    cv = CrossValidator(
         estimator=lr,
         estimatorParamMaps=grid,
         evaluator=evaluator,
         numFolds=C["model"]["cv_folds"],
         parallelism=C["model"]["parallelism"],
     )
-# MLflow (local file store)
+
+    # MLflow (local file store)
     mlflow.set_tracking_uri(f"file://{os.path.abspath(mlruns_dir)}")
     mlflow.set_experiment(C["mlflow"]["experiment"])
 
@@ -67,23 +70,24 @@ cv = CrossValidator(
             .agg(F.avg("correct").alias("acc"))
             .collect()[0]["acc"]
         )
-# Confusion matrix (2x2)
+
+        # Confusion matrix
         cm = test_pred.groupBy("label", "prediction").count().toPandas()
         cm_path = os.path.join(out_dir, "confusion_matrix.csv")
         cm.to_csv(cm_path, index=False)
 
-        # Coefficients (for LR)
+        # Coefficients
         coef_path = os.path.join(out_dir, "coefficients.txt")
         with open(coef_path, "w") as f:
             f.write(str(best.coefficients))
 
-        # Simple metrics JSON (also DVC-tracked)
+        # Metrics JSON
         metrics = {"test_auc": float(auc), "test_acc": float(acc)}
         metrics_path = os.path.join(out_dir, "metrics.json")
         with open(metrics_path, "w") as f:
             json.dump(metrics, f, indent=2)
 
-        # MLflow logging
+        # Log to MLflow
         mlflow.log_params({
             "maxIter": best._java_obj.getMaxIter(),
             "regParam": best._java_obj.getRegParam(),
@@ -94,7 +98,6 @@ cv = CrossValidator(
         mlflow.log_artifact(cm_path)
         mlflow.log_artifact(coef_path)
 
-        # Log full CV model (pipeline) as artifact
         mlflow.spark.log_model(model, artifact_path="model")
 
         # Save run_id
@@ -102,8 +105,9 @@ cv = CrossValidator(
             f.write(run.info.run_id)
 
     spark.stop()
+
 if __name__ == "__main__":
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--params", required=True, help="Path to train.yaml")
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--params", required=True, help="Path to train.yaml")
+    args = parser.parse_args()
     main(args.params)

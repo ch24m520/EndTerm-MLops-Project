@@ -106,22 +106,30 @@ preproc_pipeline = Pipeline(stages=stages).fit(train_df)
 # Keep a global 'model' reference that can be swapped by /reload-model
 model = None
 
-def load_registry_model() -> None:
+def load_registry_model() -> bool:
     """
-    Load the latest model for MODEL_NAME at MODEL_STAGE from MLflow Model Registry.
-    This function can be called at startup and at runtime (via /reload-model) to hot-reload.
+    Try to load MODEL_NAME:MODEL_STAGE from MLflow Model Registry.
+    If not available yet (fresh registry) or load fails, keep `model=None` and return False.
     """
     global model
-    # Ensure tracking URI is set (re-set is cheap and safe)
-    mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
-    model_uri = f"models:/{MODEL_NAME}/{MODEL_STAGE}"  # e.g., models:/titanic_spark_lr/Production
-    # Use mlflow.spark.load_model because the model was logged with Spark flavor
-    model = mlflow.spark.load_model(model_uri=model_uri)
+    try:
+        mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", "http://127.0.0.1:5001"))
+        model_uri = f"models:/{MODEL_NAME}/{MODEL_STAGE}"  # e.g., models:/titanic_spark_lr/Production
+        # Use mlflow.spark.load_model because the model was logged with Spark flavor
+        model = mlflow.spark.load_model(model_uri=model_uri)
+        return True
+    except Exception as e:
+        model = None
+        # Print instead of raising so the API can start without a registered model
+        print(f"[api] WARN: could not load {MODEL_NAME}:{MODEL_STAGE} yet -> {e}")
+        return False
 
-# Load at process start
+# Load at process start (do not crash if model is missing)
 @app.on_event("startup")
 def _startup():
-    load_registry_model()
+    ok = load_registry_model()
+    if not ok:
+        print("[api] Starting without a loaded model. Train and call /reload-model when ready.")
 
 # --------------------
 # Routes
@@ -131,7 +139,8 @@ def root():
     return {
         "status": "ok",
         "model_name": MODEL_NAME,
-        "model_stage": MODEL_STAGE
+        "model_stage": MODEL_STAGE,
+        "model_loaded": model is not None
     }
 
 @app.post("/reload-model")
@@ -144,8 +153,9 @@ def reload_model():
       call this endpoint to make the API serve the new version immediately.
     """
     try:
-        load_registry_model()
-        return {"status": "ok", "message": f"Reloaded {MODEL_NAME}:{MODEL_STAGE}"}
+        if load_registry_model():
+            return {"status": "ok", "message": f"Reloaded {MODEL_NAME}:{MODEL_STAGE}"}
+        raise RuntimeError("Model not found in registry yet.")
     except Exception as e:
         # Surface concise error; full stack appears in server logs
         raise HTTPException(status_code=500, detail=str(e))
@@ -159,6 +169,9 @@ def predict(p: Passenger):
     - Transforms to 'features' vector
     - Calls the Spark model's .transform() to get the prediction
     """
+    # Guard: if registry is empty / model not loaded yet
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded yet. Train & call /reload-model first.")
     try:
         # Build a single-row Spark DF with the RAW columns
         row = {
@@ -186,3 +199,4 @@ def predict(p: Passenger):
     except Exception as e:
         # Surface concise error to client and log full stack in server logs
         raise HTTPException(status_code=500, detail=str(e))
+

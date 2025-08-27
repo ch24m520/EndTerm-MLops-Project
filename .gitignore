@@ -1,7 +1,3 @@
-__pycache__/
-*.pyc
-.venv/
-
 # Data & artifacts (recreated by pipeline)
 data/raw/
 data/processed/
@@ -12,3 +8,27 @@ mlruns/
 *.log
 .DS_Store
 mlflow.db
+
+# Ignore runtime data/artifacts
+data/incoming/
+mlruns_clean/
+reports/*.json
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual environment
+.venv/
+
+# Spark temp files
+derby.log
+metastore_db/
+
+# OS files
+.DS_Store
+Thumbs.db

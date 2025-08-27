@@ -4,16 +4,16 @@ spark:
   shuffle_partitions: 4
 
 paths:
-  dataset: "data/processed/dataset.parquet"   # from Task 1 output
-  reports_dir: "reports/training"                      # DVC out
-  mlruns_dir: "mlruns"                                 # local MLflow store
+  dataset: "data/processed/dataset.parquet"
+  reports_dir: "reports/training"
+  mlruns_dir: "mlruns"
 
 train:
   test_size: 0.2
   seed: 42
 
 model:
-  type: "logreg"              # (logreg only here)
+  type: "logreg"
   maxIter: 50
   regParam_grid: [0.0, 0.01, 0.1]
   elasticNet_grid: [0.0, 0.5]
@@ -21,4 +21,7 @@ model:
   parallelism: 2
 
 mlflow:
-  experiment: "titanic_spark"
+  experiment: "titanic_spark"         # experiment name
+  tracking_uri: "file:./mlruns"       # local file store (can be http://127.0.0.1:5001 if mlflow server)
+  registry_uri: "file:./mlruns"       # same as tracking if local
+  model_name: "titanic_spark_lr"      # registry model name for Production reloads

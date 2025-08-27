@@ -156,9 +156,9 @@ def main(params_path: str):
         # Log Spark model artifact (for registry / loading via models:/)
         mlflow.spark.log_model(spark_model=model, artifact_path="model")
 
-        # ----- NEW: append resource metrics row for the report -----
+        # ----- append resource metrics row for the report -----
         try:
-            dataset_rows = df.count()          # may trigger a job; okay for small data
+            dataset_rows = df.count()          # may trigger a job; fine for small data
         except Exception:
             dataset_rows = 0
         feature_count = len(features)
@@ -168,12 +168,10 @@ def main(params_path: str):
             feature_count=feature_count, dataset_rows=dataset_rows
         )
 
-        # Use reports_dir from YAML, defaulting to "reports/training"
+        # Use reports_dir from YAML, defaulting to "reports/training", write to runs.csv
         base_reports_dir = Path(P.get("paths", {}).get("reports_dir", "reports/training"))
-        metrics_dir = base_reports_dir / "metrics"
-        metrics_dir.mkdir(parents=True, exist_ok=True)
-        out_csv = metrics_dir / "runs.csv"
-        logger.info(f"[trainer] writing metrics CSV to {out_csv}")
+        base_reports_dir.mkdir(parents=True, exist_ok=True)
+        out_csv = base_reports_dir / "runs.csv"
 
         header = ",".join(metrics_row.keys()) + "\n"
         line = ",".join(str(v) for v in metrics_row.values()) + "\n"
@@ -186,9 +184,11 @@ def main(params_path: str):
             with open(out_csv, "a") as f:
                 f.write(line)
 
+        logger.info(f"[trainer] wrote metrics CSV row -> {out_csv}")
+
         # Also log this CSV to MLflow for convenience
         mlflow.log_artifact(str(out_csv), artifact_path="report_metrics")
-        # -------------------- end NEW block ------------------------
+        # -------------------- end metrics block --------------------
 
         # Auto-register & promote if a model_name is provided in YAML
         model_name = P["mlflow"].get("model_name")

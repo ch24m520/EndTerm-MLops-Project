@@ -11,3 +11,4 @@ mlruns/
 # Misc
 *.log
 .DS_Store
+mlflow.db

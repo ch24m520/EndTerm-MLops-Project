@@ -9,7 +9,7 @@ stages:
     outs:
     - data/processed
   train:
-    cmd: PYTHONPATH=. MLFLOW_TRACKING_URI=./mlruns python -m 
+    cmd: PYTHONPATH=. MLFLOW_TRACKING_URI=http://127.0.0.1:5001 python -m 
       src.training.train_spark_mllib --params conf/train.yaml
     deps:
     - conf/train.yaml

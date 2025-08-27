@@ -26,9 +26,16 @@ def main(params_path: str):
     # ----------------------------
     # MLflow setup (from mlflow.*)
     # ----------------------------
-    mlflow.set_tracking_uri(P["mlflow"].get("tracking_uri", "file:./mlruns"))
-    mlflow.set_registry_uri(P["mlflow"].get("registry_uri", P["mlflow"].get("tracking_uri", "file:./mlruns")))
+    # ----------------------------
+    # MLflow setup (from mlflow.* with ENV override)
+
+    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", P["mlflow"].get("tracking_uri", "file:./mlruns_clean")))
+    mlflow.set_registry_uri(os.getenv("MLFLOW_REGISTRY_URI", P["mlflow"].get("registry_uri", P["mlflow"].get("tracking_uri", "file:./mlruns_clean"))))
     mlflow.set_experiment(P["mlflow"].get("experiment", "default"))
+
+    # mlflow.set_tracking_uri(P["mlflow"].get("tracking_uri", "file:./mlruns"))
+    # mlflow.set_registry_uri(P["mlflow"].get("registry_uri", P["mlflow"].get("tracking_uri", "file:./mlruns")))
+    # mlflow.set_experiment(P["mlflow"].get("experiment", "default"))
 
     # ----------------------------
     # Spark setup (from spark.*)

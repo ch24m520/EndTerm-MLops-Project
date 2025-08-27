@@ -21,7 +21,7 @@ stages:
     outs:
     - path: data/processed
       hash: md5
-      md5: b9944649326c2070b3eae649c0802dea.dir
+      md5: 686e65d4711ee123109c048a67008554.dir
       size: 7285
       nfiles: 4
   train:
@@ -34,18 +34,18 @@ stages:
       size: 539
     - path: data/processed
       hash: md5
-      md5: b9944649326c2070b3eae649c0802dea.dir
+      md5: 686e65d4711ee123109c048a67008554.dir
       size: 7285
       nfiles: 4
     - path: src/training/train_spark_mllib.py
       hash: md5
-      md5: 2b27dd3de42c56baa67cb95eae83106b
-      size: 5807
+      md5: 1952fa24b9e1f3c5d1022651cc8765c9
+      size: 6296
     outs:
     - path: reports/training
       hash: md5
-      md5: 7f5ba80371603a019c053d716dcd6cd6.dir
-      size: 406
+      md5: 6cd49f0a57d90f8a17a537955d16861f.dir
+      size: 402
       nfiles: 4
   register_model:
     cmd: MLFLOW_TRACKING_URI=http://127.0.0.1:5001 PYTHONPATH=. python -m 

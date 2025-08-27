@@ -4,7 +4,7 @@ spark:
   shuffle_partitions: 4
 
 paths:
-  dataset: "data/processed/titanic_prepared.parquet"   # from Task 1 output
+  dataset: "data/processed/dataset.parquet"   # from Task 1 output
   reports_dir: "reports/training"                      # DVC out
   mlruns_dir: "mlruns"                                 # local MLflow store
 

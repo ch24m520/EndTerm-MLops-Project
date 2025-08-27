@@ -1,12 +1,17 @@
 import argparse, json, os, yaml
+from pathlib import Path
+from datetime import datetime
+
 from pyspark.sql import SparkSession
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.classification import LogisticRegression, RandomForestClassifier
 from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+
 import mlflow
 import mlflow.spark          # for logging Spark models to MLflow
 import time                  # for fit_time_sec
+
 from src.utils.logger import get_logger
 
 
@@ -16,6 +21,28 @@ def build_spark(app_name: str, master: str, shuffle_partitions: int):
             .master(master)
             .config("spark.sql.shuffle.partitions", shuffle_partitions)
             .getOrCreate())
+
+
+def _collect_spark_metrics_row(spark, P, fit_time_sec: float, acc: float,
+                               feature_count: int, dataset_rows: int) -> dict:
+    """Collect a small set of resource/knob metrics for reporting."""
+    sc = spark.sparkContext
+    conf = dict(sc.getConf().getAll())
+    return {
+        "timestamp": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "experiment": P["mlflow"].get("experiment", "default"),
+        "model_type": P.get("model", {}).get("type", "logreg"),
+        "fit_time_sec": round(float(fit_time_sec), 4),
+        "accuracy": round(float(acc), 6),
+        "shuffle_partitions": int(P["spark"].get("shuffle_partitions", 4)),
+        "defaultParallelism": int(sc.defaultParallelism),
+        "app_name": P["spark"].get("app_name", "train"),
+        "driver_memory": conf.get("spark.driver.memory", ""),
+        "executor_memory": conf.get("spark.executor.memory", ""),
+        "master": P["spark"].get("master", ""),
+        "dataset_rows": int(dataset_rows),
+        "feature_count": int(feature_count),
+    }
 
 
 def main(params_path: str):
@@ -128,6 +155,37 @@ def main(params_path: str):
 
         # Log Spark model artifact (for registry / loading via models:/)
         mlflow.spark.log_model(spark_model=model, artifact_path="model")
+
+        # ----- NEW: append resource metrics row for the report -----
+        try:
+            dataset_rows = df.count()          # may trigger a job; okay for small data
+        except Exception:
+            dataset_rows = 0
+        feature_count = len(features)
+
+        metrics_row = _collect_spark_metrics_row(
+            spark=spark, P=P, fit_time_sec=fit_time_sec, acc=acc,
+            feature_count=feature_count, dataset_rows=dataset_rows
+        )
+
+        out_dir_reports = Path("reports/training/metrics")
+        out_dir_reports.mkdir(parents=True, exist_ok=True)
+        out_csv = out_dir_reports / "runs.csv"
+
+        header = ",".join(metrics_row.keys()) + "\n"
+        line = ",".join(str(v) for v in metrics_row.values()) + "\n"
+
+        if not out_csv.exists():
+            with open(out_csv, "w") as f:
+                f.write(header)
+                f.write(line)
+        else:
+            with open(out_csv, "a") as f:
+                f.write(line)
+
+        # Also log this CSV to MLflow for convenience
+        mlflow.log_artifact(str(out_csv), artifact_path="report_metrics")
+        # -------------------- end NEW block ------------------------
 
         # Auto-register & promote if a model_name is provided in YAML
         model_name = P["mlflow"].get("model_name")

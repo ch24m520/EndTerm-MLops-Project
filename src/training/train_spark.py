@@ -168,9 +168,12 @@ def main(params_path: str):
             feature_count=feature_count, dataset_rows=dataset_rows
         )
 
-        out_dir_reports = Path("reports/training/metrics")
-        out_dir_reports.mkdir(parents=True, exist_ok=True)
-        out_csv = out_dir_reports / "runs.csv"
+        # Use reports_dir from YAML, defaulting to "reports/training"
+        base_reports_dir = Path(P.get("paths", {}).get("reports_dir", "reports/training"))
+        metrics_dir = base_reports_dir / "metrics"
+        metrics_dir.mkdir(parents=True, exist_ok=True)
+        out_csv = metrics_dir / "runs.csv"
+        logger.info(f"[trainer] writing metrics CSV to {out_csv}")
 
         header = ",".join(metrics_row.keys()) + "\n"
         line = ",".join(str(v) for v in metrics_row.values()) + "\n"

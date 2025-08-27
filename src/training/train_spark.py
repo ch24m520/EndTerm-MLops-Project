@@ -24,18 +24,20 @@ def main(params_path: str):
         P = yaml.safe_load(f)
 
     # ----------------------------
-    # MLflow setup (from mlflow.*)
+    # MLflow setup (ENV → YAML → fallback)
     # ----------------------------
-    # ----------------------------
-    # MLflow setup (from mlflow.* with ENV override)
-
-    mlflow.set_tracking_uri(os.getenv("MLFLOW_TRACKING_URI", P["mlflow"].get("tracking_uri", "file:./mlruns_clean")))
-    mlflow.set_registry_uri(os.getenv("MLFLOW_REGISTRY_URI", P["mlflow"].get("registry_uri", P["mlflow"].get("tracking_uri", "file:./mlruns_clean"))))
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI", P["mlflow"].get("tracking_uri", "file:./mlruns_clean"))
+    registry_uri = os.getenv("MLFLOW_REGISTRY_URI", P["mlflow"].get("registry_uri", tracking_uri))
+    mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_registry_uri(registry_uri)
     mlflow.set_experiment(P["mlflow"].get("experiment", "default"))
-
-    # mlflow.set_tracking_uri(P["mlflow"].get("tracking_uri", "file:./mlruns"))
-    # mlflow.set_registry_uri(P["mlflow"].get("registry_uri", P["mlflow"].get("tracking_uri", "file:./mlruns")))
-    # mlflow.set_experiment(P["mlflow"].get("experiment", "default"))
+    # Debug: print effective URIs once per run
+    try:
+        from mlflow.tracking import MlflowClient
+        _client = MlflowClient()
+        print(f"[trainer] tracking_uri={mlflow.get_tracking_uri()} registry_uri={_client._registry_uri}")
+    except Exception:
+        print(f"[trainer] tracking_uri={mlflow.get_tracking_uri()}")
 
     # ----------------------------
     # Spark setup (from spark.*)
@@ -127,20 +129,20 @@ def main(params_path: str):
         # Log Spark model artifact (for registry / loading via models:/)
         mlflow.spark.log_model(spark_model=model, artifact_path="model")
 
-        # Optional: register & promote to Production if model_name provided
+        # Auto-register & promote if a model_name is provided in YAML
         model_name = P["mlflow"].get("model_name")
         if model_name:
-            model_uri = f"runs:/{mlflow.active_run().info.run_id}/model"
+            from mlflow.tracking import MlflowClient
+            run_id = mlflow.active_run().info.run_id
+            model_uri = f"runs:/{run_id}/model"
             try:
                 mv = mlflow.register_model(model_uri=model_uri, name=model_name)
-                from mlflow import MlflowClient
-                client = MlflowClient()
-                client.transition_model_version_stage(
+                MlflowClient().transition_model_version_stage(
                     name=model_name, version=mv.version, stage="Production", archive_existing_versions=True
                 )
-                logger.info(f"Registered '{model_name}' v{mv.version} -> Production")
+                logger.info(f"[trainer] Registered '{model_name}' v{mv.version} -> Production")
             except Exception as e:
-                logger.warning(f"Model registry step skipped/failed: {e}")
+                logger.warning(f"[trainer] Model registry step skipped/failed: {e}")
 
         # Keep original local artifacts
         out_dir = os.path.join("models", "best")
@@ -159,4 +161,3 @@ if __name__ == "__main__":
     ap.add_argument("--params", required=True)
     args = ap.parse_args()
     main(args.params)
-

@@ -85,7 +85,7 @@ def main():
         sys.exit(0)
 
     # 2) Retrain (your trainer should log to MLflow and register/promote to Production)
-    must_run('python src/training/train_spark_mllib.py')
+    must_run('python src/training/train_spark_mllib.py --params conf/train.yaml')
 
     # 3) Ask API to hot-reload Production model
     try:

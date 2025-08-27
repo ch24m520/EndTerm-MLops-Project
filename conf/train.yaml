@@ -22,6 +22,6 @@ model:
 
 mlflow:
   experiment: "titanic_spark"         # experiment name
-  tracking_uri: "file:./mlruns"       # local file store (can be http://127.0.0.1:5001 if mlflow server)
-  registry_uri: "file:./mlruns"       # same as tracking if local
+  tracking_uri: "file:./mlruns_clean"       # local file store (can be http://127.0.0.1:5001 if mlflow server)
+  registry_uri: "file:./mlruns_clean"       # same as tracking if local
   model_name: "titanic_spark_lr"      # registry model name for Production reloads

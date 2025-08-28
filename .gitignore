@@ -11,6 +11,7 @@ mlflow.db
 
 # Ignore runtime data/artifacts
 data/incoming/
+mlruns
 mlruns_clean/
 reports/*.json
 
@@ -32,3 +33,8 @@ metastore_db/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Reports and generated outputs
+reports/*.json
+reports/training/metrics/
+reports/training/plots/
